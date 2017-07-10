@@ -7,6 +7,7 @@ from .core.exceptions import MigrationException
 from .helpers import Utils
 from getpass import getpass
 from .cli import CLI
+from subprocess import Popen, PIPE
 
 class Oracle(object):
     __re_objects = re.compile("(?ims)(?P<pre>.*?)(?P<main>create[ \n\t\r]*(or[ \n\t\r]+replace[ \n\t\r]*)?(trigger|function|procedure|package|package body).*?)\n[ \n\t\r]*/([ \n\t\r]+(?P<pos>.*)|$)")
@@ -21,6 +22,7 @@ class Oracle(object):
         self.__passwd = config.get("database_password")
         self.__db = config.get("database_name")
         self.__version_table = config.get("database_version_table")
+        self.__use_sqlplus = config.get("database_engine_use_cli", False)
 
         self.__driver = driver
         if not driver:
@@ -38,6 +40,13 @@ class Oracle(object):
         self._create_database_if_not_exists()
         self._create_version_table_if_not_exists()
 
+    def __escape_identifier(self, id):
+        # Oracle requires quotes around table names beginning with underscores
+        if id.startswith("_"):
+            return '"' + id + '"'
+        return id
+
+
     def __connect(self):
         try:
             dsn = self.__db
@@ -48,7 +57,25 @@ class Oracle(object):
         except Exception as e:
             raise Exception("could not connect to database: %s" % e)
 
-    def __execute(self, sql, execution_log=None):
+    def __execute(self, sql, execution_log=None, use_sqlplus=False):
+        if use_sqlplus:
+            oracle_home = os.getenv("ORACLE_HOME")
+            if oracle_home == "":
+                raise Exception("When --database-engine-use-cli, $ORACLE_HOME must be set")
+            try:
+                sqlplus = Popen([oracle_home + '/bin/sqlplus','-S', "%s/%s@%s:%d/%s" % (self.__user, self.__passwd, self.__host, self.__port, self.__db)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                sqlplus.stdin.write(sql)
+                stdout, stderr = sqlplus.communicate()
+                if stdout == "":
+                    raise Exception("sqlplus stdout is blank, this typically means the sql executed made no changes. Are you missing a semicolon or commit? SQL:\n%s\n\n\n STDERR:\n%s" % (sql, stderr))
+                if execution_log:
+                    execution_log("STDOUT:\n%s\n\nSTDERR:\n%s\n" % (stdout, stderr))
+                if sqlplus.returncode != 0:
+                    raise Exception("Error is sqlplus execution: STDOUT:\n%s\n\n\n STDERR:\n%s" % (stdout, stderr))
+                return
+            except OSError as e:
+                raise Exception("Failed to execute sqlplus with error: " + e.message)
+
         conn = self.__connect()
         cursor = conn.cursor()
         curr_statement = None
@@ -81,7 +108,7 @@ class Oracle(object):
 
         if up:
             # moving up and storing history
-            sql = "insert into %s (id, version, label, name, sql_up, sql_down) values (%s_seq.nextval, :version, :label, :migration_file_name, :sql_up, :sql_down)" % (self.__version_table, self.__version_table)
+            sql = "insert into %s (id, version, label, name, sql_up, sql_down) values (%s.nextval, :version, :label, :migration_file_name, :sql_up, :sql_down)" % (self.__escape_identifier(self.__version_table), self.__escape_identifier(self.__version_table + "_seq"))
             params['sql_up'] = sql_up and Utils.encode(sql_up, self.__script_encoding) or ""
             params['sql_down'] = sql_down and Utils.encode(sql_down, self.__script_encoding) or ""
 
@@ -91,7 +118,7 @@ class Oracle(object):
             cursor.setinputsizes(sql_up=self.__driver.CLOB, sql_down=self.__driver.CLOB)
         else:
             # moving down and deleting from history
-            sql = "delete from %s where version = :version" % (self.__version_table)
+            sql = "delete from %s where version = :version" % (self.__escape_identifier(self.__version_table))
 
         try:
             cursor.execute(Utils.encode(sql, self.__script_encoding), params)
@@ -218,39 +245,39 @@ class Oracle(object):
     def _create_version_table_if_not_exists(self):
         # create version table
         try:
-            sql = "select version from %s" % self.__version_table
+            sql = "select version from %s" % self.__escape_identifier(self.__version_table)
             self.__execute(sql)
         except Exception:
-            sql = "create table %s ( id number(11) not null, version varchar2(20) default '0' NOT NULL, label varchar2(255), name varchar2(255), sql_up clob, sql_down clob, CONSTRAINT %s_pk PRIMARY KEY (id) ENABLE)" % (self.__version_table, self.__version_table)
+            sql = "create table %s ( id number(11) not null, version varchar2(20) default '0' NOT NULL, label varchar2(255), name varchar2(255), sql_up clob, sql_down clob, CONSTRAINT %s PRIMARY KEY (id) ENABLE)" % (self.__escape_identifier(self.__version_table), self.__escape_identifier(self.__version_table + "_pk"))
             self.__execute(sql)
             try:
-                self.__execute("drop sequence %s_seq" % self.__version_table)
+                self.__execute("drop sequence %s" % self.__escape_identifier(self.__version_table + "_seq"))
             except:
                 pass
             finally:
-                self.__execute("create sequence %s_seq start with 1 increment by 1 nomaxvalue" % self.__version_table)
+                self.__execute("create sequence %s start with 1 increment by 1 nomaxvalue" % self.__escape_identifier(self.__version_table + "_seq"))
 
         # check if there is a register there
         conn = self.__connect()
         cursor = conn.cursor()
-        cursor.execute("select count(*) from %s" % self.__version_table)
+        cursor.execute("select count(*) from %s" % self.__escape_identifier(self.__version_table))
         count = cursor.fetchone()[0]
         cursor.close()
         conn.close()
 
         # if there is not a version register, insert one
         if count == 0:
-            sql = "insert into %s (id, version) values (%s_seq.nextval, '0')" % (self.__version_table, self.__version_table)
+            sql = "insert into %s (id, version) values (%s.nextval, '0')" % (self.__escape_identifier(self.__version_table), self.__escape_identifier(self.__version_table + "_seq"))
             self.__execute(sql)
 
     def change(self, sql, new_db_version, migration_file_name, sql_up, sql_down, up=True, execution_log=None, label_version=None):
-        self.__execute(sql, execution_log)
+        self.__execute(sql, execution_log=execution_log, use_sqlplus=self.__use_sqlplus)
         self.__change_db_version(new_db_version, migration_file_name, sql_up, sql_down, up, execution_log, label_version)
 
     def get_current_schema_version(self):
         conn = self.__connect()
         cursor = conn.cursor()
-        cursor.execute("select version from %s order by id desc" % self.__version_table)
+        cursor.execute("select version from %s order by id desc" % self.__escape_identifier(self.__version_table))
         version = cursor.fetchone()[0]
         cursor.close()
         conn.close()
@@ -260,7 +287,7 @@ class Oracle(object):
         versions = []
         conn = self.__connect()
         cursor = conn.cursor()
-        cursor.execute("select version from %s order by id" % self.__version_table)
+        cursor.execute("select version from %s order by id" % self.__escape_identifier(self.__version_table))
         while True:
             version = cursor.fetchone()
             if version is None:
@@ -274,7 +301,7 @@ class Oracle(object):
     def get_version_id_from_version_number(self, version):
         conn = self.__connect()
         cursor = conn.cursor()
-        cursor.execute("select id from %s where version = '%s' order by id desc" % (self.__version_table, version))
+        cursor.execute("select id from %s where version = '%s' order by id desc" % (self.__escape_identifier(self.__version_table), version))
         result = cursor.fetchone()
         _id = result and int(result[0]) or None
         cursor.close()
@@ -284,7 +311,7 @@ class Oracle(object):
     def get_version_number_from_label(self, label):
         conn = self.__connect()
         cursor = conn.cursor()
-        cursor.execute("select version from %s where label = '%s' order by id desc" % (self.__version_table, label))
+        cursor.execute("select version from %s where label = '%s' order by id desc" % (self.__escape_identifier(self.__version_table), label))
         result = cursor.fetchone()
         version = result and result[0] or None
         cursor.close()
@@ -295,7 +322,7 @@ class Oracle(object):
         migrations = []
         conn = self.__connect()
         cursor = conn.cursor()
-        cursor.execute("select id, version, label, name, sql_up, sql_down from %s order by id" % self.__version_table)
+        cursor.execute("select id, version, label, name, sql_up, sql_down from %s order by id" % self.__escape_identifier(self.__version_table))
         while True:
             migration_db = cursor.fetchone()
             if migration_db is None:

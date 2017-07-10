@@ -14,15 +14,17 @@ class Migration(object):
     MIGRATION_FILES_MASK = r"[0-9]{14}_[\w\-]+%s$" % MIGRATION_FILES_EXTENSION
     TEMPLATE = '#-*- coding:%s -*-\nSQL_UP = u"""\n\n"""\n\nSQL_DOWN = u"""\n\n"""\n'
 
-    def __init__(self, file=None, id=0, file_name="", version="", label=None, sql_up="", sql_down="", script_encoding="utf-8"):
+    def __init__(self, file=None, id=0, file_name="", version="", label=None, sql_up="", sql_down="", script_encoding="utf-8", sql_prefix=""):
         self.id = id
         self.file_name = file_name
         self.version = version
-        self.sql_up = sql_up
-        self.sql_down = sql_down
+        self.sql_prefix = sql_prefix
+        self.sql_up = self.sql_prefix + sql_up
+        self.sql_down = self.sql_prefix + sql_down
         self.script_encoding = script_encoding
         self.label = label
         self.abspath = ""
+
         if file:
             file_name = os.path.split(file)[1]
             if not Migration.is_file_name_valid(file_name):
@@ -39,8 +41,8 @@ class Migration(object):
     def _get_commands(self):
         try:
             variables = Utils.get_variables_from_file(self.abspath, self.script_encoding)
-            SQL_UP = Migration.ensure_sql_unicode(variables['SQL_UP'], self.script_encoding)
-            SQL_DOWN = Migration.ensure_sql_unicode(variables['SQL_DOWN'], self.script_encoding)
+            SQL_UP = Migration.ensure_sql_unicode(self.sql_prefix + variables['SQL_UP'], self.script_encoding)
+            SQL_DOWN = Migration.ensure_sql_unicode(self.sql_prefix + variables['SQL_DOWN'], self.script_encoding)
             (SQL_UP, SQL_DOWN)
         except KeyError:
             raise Exception("migration file is incorrect; it does not define 'SQL_UP' or 'SQL_DOWN' (%s)" % self.abspath)
@@ -122,6 +124,7 @@ class SimpleDBMigrate(object):
         self._migrations_dir = config.get("database_migrations_dir")
         self._script_encoding=config.get("database_script_encoding", "utf-8")
         self.all_migrations = None
+        self.sql_prefix = self._sql_prefix_from_file(config.get("sql_prefix_file", ""))
 
     def get_all_migrations(self):
         if self.all_migrations:
@@ -140,7 +143,7 @@ class SimpleDBMigrate(object):
 
             for dir_file in dir_list:
                 if dir_file.endswith(Migration.MIGRATION_FILES_EXTENSION) and Migration.is_file_name_valid(dir_file):
-                    migration = Migration('%s/%s' % (path, dir_file), script_encoding=self._script_encoding)
+                    migration = Migration('%s/%s' % (path, dir_file), script_encoding=self._script_encoding, sql_prefix=self.sql_prefix)
                     migrations.append(migration)
 
         if len(migrations) == 0:
@@ -168,3 +171,9 @@ class SimpleDBMigrate(object):
         if len(migrations) > 0:
             return migrations[0]
         return None
+
+    def _sql_prefix_from_file(self, file):
+        if file != "":
+            with open(file, 'r') as sql_prefix:
+                return sql_prefix.read() + '\n'
+        return ""

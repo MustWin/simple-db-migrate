@@ -5,11 +5,11 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
-from mock import patch, call, Mock
+from mock import patch, call, Mock, ANY
 from simple_db_migrate.core import Migration
 from simple_db_migrate.main import Main
 from simple_db_migrate.config import Config
-from tests import BaseTest, create_migration_file
+from tests import BaseTest, create_migration_file, create_file
 
 class MainTest(BaseTest):
     def setUp(self):
@@ -381,6 +381,23 @@ class MainTest(BaseTest):
         main = Main(sgdb=Mock(**{'get_current_schema_version.return_value':'20090214115600', 'get_version_number_from_label.return_value':'20090214115300', 'get_version_id_from_version_number.side_effect':get_version_id_from_version_number_side_effect}), config=config)
         main.execute()
         files_to_be_executed_mock.assert_called_with('20090214115600', '20090214115300', False)
+
+    @patch('simple_db_migrate.main.Main._get_migration_files_to_be_executed', return_value=[Migration(file_name="20090214115600_06_test_migration.migration", version="20090214115600", sql_up="sql up 06", sql_down="sql down 06", sql_prefix='define &v = 123\n')])
+    @patch('simple_db_migrate.main.Main._execution_log')
+    @patch('simple_db_migrate.core.SimpleDBMigrate._sql_prefix_from_file', return_value='define &v = 123\n')
+    def test_it_should_prepend_sql_prefix_file_contents_to_sql_when_when_sql_prefix_file_is_set(self, _sql_prefix_from_file_mock, _execution_log_mock, files_to_be_executed_mock):
+        self.initial_config.update({"schema_version":'20090214115600', "sql_prefix_file": "app1_vars.sql"})
+        config=Config(self.initial_config)
+        main = Main(sgdb=Mock(**{'change.return_value':None, 'get_current_schema_version.return_value':'20090214115600', 'get_version_id_from_version_number.side_effect':get_version_id_from_version_number_side_effect}), config=config)
+        main.execute()
+
+        expectedUp = 'define &v = 123' + '\nsql up 06'
+        expectedDown = 'define &v = 123' + '\nsql down 06'
+        main.sgdb.change.assert_has_calls([
+            call(expectedUp, '20090214115600', '20090214115600_06_test_migration.migration', expectedUp, expectedDown, True, _execution_log_mock, ANY),
+        ], False)
+        self.assertEqual(1, main.sgdb.change.call_count)
+
 
     @patch('simple_db_migrate.main.Main._get_migration_files_to_be_executed', return_value=[Migration(file_name="20090214115500_05_test_migration.migration", version="20090214115500", sql_up="sql up 05", sql_down="sql down 05"), Migration(file_name="20090214115600_06_test_migration.migration", version="20090214115600", sql_up="sql up 06", sql_down="sql down 06")])
     @patch('simple_db_migrate.main.Main._execution_log')

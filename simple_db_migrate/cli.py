@@ -226,6 +226,20 @@ class CLI(object):
                 "default": None,
                 "help": "Show info of applied migrations (options: labels, last_label)"
             },
+
+            {
+                "opt_str": ("--sql-prefix-file",),
+                "dest": "sql_prefix_file",
+                "default": None,
+                "help": "The contents of this file will be appended to every migration run"
+            },
+
+            {
+                "opt_str": ("--db-engine-use-cli",),
+                "dest": "database_engine_use_cli",
+                "default": False,
+                "help": "When True, will use a CLI interface instead of the native drivers. Occasionally useful for specialized scripting unsupported by drivers. Currently only implemented for Oracle's sqlplus client."
+            },
         )
 
     @classmethod
@@ -240,4 +254,4 @@ class CLI(object):
 
     @classmethod
     def msg(cls, msg, color="CYAN"):
-        print("{}{}{}".format(cls.color[color], msg, cls.color["END"]))
+        print("{0}{1}{2}".format(cls.color[color], msg, cls.color["END"]))

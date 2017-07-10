@@ -2,6 +2,7 @@ from getpass import getpass
 import codecs
 import sys
 import os
+import traceback
 
 from .cli import CLI
 from .config import FileConfig, Config
@@ -48,6 +49,8 @@ def run(options):
         config.update('database_host', options.get('database_host'))
         config.update('database_port', options.get('database_port'))
         config.update('database_name', options.get('database_name'))
+        config.update('sql_prefix_file', options.get('sql_prefix_file'))
+        config.update('database_engine_use_cli', options.get('database_engine_use_cli'))
 
         if config.get('database_port', None):
             config.update('database_port', int(config.get('database_port')))
@@ -93,6 +96,7 @@ def run(options):
     except KeyboardInterrupt:
         CLI.info_and_exit("\nExecution interrupted by user...")
     except Exception as e:
+        traceback.print_exc(e)
         CLI.error_and_exit(str(e))
 
 if __name__ == '__main__':
