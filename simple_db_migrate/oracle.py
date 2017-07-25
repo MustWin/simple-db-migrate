@@ -63,7 +63,7 @@ class Oracle(object):
             if oracle_home == "":
                 raise Exception("When --database-engine-use-cli, $ORACLE_HOME must be set")
             try:
-                sqlplus = Popen([oracle_home + '/bin/sqlplus','-S', "%s/%s@%s:%d/%s" % (self.__user, self.__passwd, self.__host, self.__port, self.__db)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                sqlplus = Popen([oracle_home + '/sqlplus','-S', "%s/%s@%s:%d/%s" % (self.__user, self.__passwd, self.__host, self.__port, self.__db)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
                 sqlplus.stdin.write(sql)
                 stdout, stderr = sqlplus.communicate()
                 if stdout == "":
