@@ -74,7 +74,7 @@ class Oracle(object):
                     raise Exception("Error is sqlplus execution: STDOUT:\n%s\n\n\n STDERR:\n%s" % (stdout, stderr))
                 return
             except OSError as e:
-                raise Exception("Failed to execute sqlplus with error: " + e.message)
+                raise Exception("Failed to execute sqlplus with error: %s" % e)
 
         conn = self.__connect()
         cursor = conn.cursor()

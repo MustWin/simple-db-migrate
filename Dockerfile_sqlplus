@@ -1,0 +1,31 @@
+FROM ubuntu:latest
+
+RUN apt-get update && apt-get -y install \
+        build-essential \
+        curl \
+        libaio1\
+        python \
+        python-dev \
+        python-pip \
+        python-setuptools \
+        python-yaml \
+        unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+ADD instantclient-basic-linux.x64-12.2.0.1.0.zip /
+RUN unzip instantclient-basic-linux.x64-12.2.0.1.0.zip
+ADD instantclient-jdbc-linux.x64-12.2.0.1.0.zip /
+RUN unzip instantclient-jdbc-linux.x64-12.2.0.1.0.zip
+ADD instantclient-sdk-linux.x64-12.2.0.1.0.zip /
+RUN unzip instantclient-sdk-linux.x64-12.2.0.1.0.zip
+ADD instantclient-sqlplus-linux.x64-12.2.0.1.0.zip /
+RUN unzip instantclient-sqlplus-linux.x64-12.2.0.1.0.zip
+
+ENV LD_LIBRARY_PATH /instantclient_12_2
+ENV ORACLE_HOME /instantclient_12_2
+
+RUN cd /instantclient_12_2 && ln -s libclntsh.so.12.1 libclntsh.so
+RUN cd /instantclient_12_2 && ln -s libocci.so.12.1 libocci.so
+
+# CMD /instantclient_12_2/sqlplus <user>/<password>@//xxx.yyy.eu-west-1.rds.amazonaws.com:1521/ORCL
+CMD /instantclient_12_2/sqlplus $URL
