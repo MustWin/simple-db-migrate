@@ -63,15 +63,16 @@ class Oracle(object):
             if oracle_home == "":
                 raise Exception("When --database-engine-use-cli, $ORACLE_HOME must be set")
             try:
+                # We add this so that db-migrate has a non-zero exit code on failure
                 sqlplus = Popen([oracle_home + '/sqlplus','-S', "%s/%s@%s:%d/%s" % (self.__user, self.__passwd, self.__host, self.__port, self.__db)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
                 sqlplus.stdin.write(sql)
                 stdout, stderr = sqlplus.communicate()
                 if stdout == "":
                     raise Exception("sqlplus stdout is blank, this typically means the sql executed made no changes. Are you missing a semicolon or commit? SQL:\n%s\n\n\n STDERR:\n%s" % (sql, stderr))
                 if execution_log:
-                    execution_log("STDOUT:\n%s\n\nSTDERR:\n%s\n" % (stdout, stderr))
+                    execution_log("Returned: %d\nSQL:\n%s\n\nSTDOUT:\n%s\n\nSTDERR:\n%s\n" % (sqlplus.returncode, sql, stdout, stderr))
                 if sqlplus.returncode != 0:
-                    raise Exception("Error is sqlplus execution: STDOUT:\n%s\n\n\n STDERR:\n%s" % (stdout, stderr))
+                    raise Exception("Error in sqlplus execution: SQL:\n%s\n\nSTDOUT:\n%s\n\n\n STDERR:\n%s" % (sql, stdout, stderr))
                 return
             except OSError as e:
                 raise Exception("Failed to execute sqlplus with error: %s" % e)
