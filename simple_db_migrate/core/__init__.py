@@ -126,7 +126,7 @@ class SimpleDBMigrate(object):
         self.all_migrations = None
         self.sql_prefix = self._sql_prefix_from_file(config.get("sql_prefix_file", ""))
         if config.get("database_engine", "") == 'oracle' and config.get("database_engine_use_cli", False):
-            self.sql_prefix = "whenever sqlerror exit failure;\n" + self.sql_prefix
+            self.sql_prefix = "whenever sqlerror exit failure rollback;\nwhenever oserror exit failure rollback;\n" + self.sql_prefix
             print "SQLPREFIX: %s" % self.sql_prefix
 
     def get_all_migrations(self):
