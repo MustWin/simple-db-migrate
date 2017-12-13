@@ -27,5 +27,7 @@ ENV ORACLE_HOME /instantclient_12_2
 RUN cd /instantclient_12_2 && ln -s libclntsh.so.12.1 libclntsh.so
 RUN cd /instantclient_12_2 && ln -s libocci.so.12.1 libocci.so
 
+RUN mkdir /instantclient_12_2/bin && ln -s /instantclient_12_2/sqlplus /instantclient_12_2/bin/sqlplus
+
 # CMD /instantclient_12_2/sqlplus <user>/<password>@//xxx.yyy.eu-west-1.rds.amazonaws.com:1521/ORCL
 CMD /instantclient_12_2/sqlplus $URL

@@ -8,6 +8,7 @@ from .helpers import Utils
 from getpass import getpass
 from .cli import CLI
 from subprocess import Popen, PIPE
+import os.path
 
 class Oracle(object):
     __re_objects = re.compile("(?ims)(?P<pre>.*?)(?P<main>create[ \n\t\r]*(or[ \n\t\r]+replace[ \n\t\r]*)?(trigger|function|procedure|package|package body).*?)\n[ \n\t\r]*/([ \n\t\r]+(?P<pos>.*)|$)")
@@ -63,8 +64,12 @@ class Oracle(object):
             if oracle_home == "":
                 raise Exception("When --database-engine-use-cli, $ORACLE_HOME must be set")
             try:
+                # Sqlplus is in different places in the dockerfile and on VRA hosts, we check both
+                sqlplusPath = oracle_home + '/sqlplus'
+                if not os.path.isfile(sqlplusPath):
+                    sqlplusPath = oracle_home + '/bin/sqlplus'
                 # We add this so that db-migrate has a non-zero exit code on failure
-                sqlplus = Popen([oracle_home + '/sqlplus','-S', "%s/%s@%s:%d/%s" % (self.__user, self.__passwd, self.__host, self.__port, self.__db)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                sqlplus = Popen([sqlplusPath,'-S', "%s/%s@%s:%d/%s" % (self.__user, self.__passwd, self.__host, self.__port, self.__db)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
                 sqlplus.stdin.write(sql)
                 stdout, stderr = sqlplus.communicate()
                 if stdout == "":

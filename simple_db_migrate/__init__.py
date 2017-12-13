@@ -7,6 +7,7 @@ import traceback
 from .cli import CLI
 from .config import FileConfig, Config
 from .main import Main
+from .server import Server
 
 SIMPLE_DB_MIGRATE_VERSION = '3.0.0'
 
@@ -17,6 +18,10 @@ if hasattr(sys.stdout, 'encoding') and sys.stdout.encoding != 'UTF-8':
 def run_from_argv(args=None):
     (options, _) = CLI.parse(args)
     run(options.__dict__)
+
+def server(args=None):
+    Server()
+
 
 def run(options):
     try:

@@ -18,6 +18,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'db-migrate = simple_db_migrate:run_from_argv',
+            'db-migrate-server = simple_db_migrate:server',
         ],
     },
 
