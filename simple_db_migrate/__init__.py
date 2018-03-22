@@ -7,7 +7,7 @@ import traceback
 from .cli import CLI
 from .config import FileConfig, Config
 from .main import Main
-from .server import Server
+from .server.server import Server
 
 SIMPLE_DB_MIGRATE_VERSION = '3.0.0'
 

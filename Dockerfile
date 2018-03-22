@@ -1,9 +1,11 @@
 FROM mikejihbe/sqlplus:latest
 
-RUN pip install --upgrade pip && pip install cx_Oracle
-
+RUN mkdir /simple-db-migrate
+ADD requirements.txt /simple-db-migrate/requirements.txt
+WORKDIR /simple-db-migrate
+RUN pip install --upgrade pip && pip install -r requirements.txt
 ADD . /simple-db-migrate
-RUN cd /simple-db-migrate && python ./setup.py install
+RUN python ./setup.py install
 
 WORKDIR /db
 ENTRYPOINT ["db-migrate"]
