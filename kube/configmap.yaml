@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edp-db-migration-api
+data:
+  SECRET_STORE: file
+  ENCRYPTION_KEY: EhPtcrWG
+  STORAGE_ROOT: /secrets
+  AUTH_METHOD: secret
+  AUTH_TOKEN: V2g7fDAoqCd8BPgnhVMkfVX3X

@@ -22,9 +22,11 @@ class http_server:
             myHandler(router({
                 "GET": {
                     "^/$": lambda handler: healthCheck(handler),
+                    # /config/tmag/qlab06
                     "^/config/\w+/\w+$": lambda handler: authorized(handler, auth) and getConfig(handler, auth, store),
                 },
                 "POST": {
+                    # /migrate/tmag/qlab06?artifactory_db_url=https://blah.com/t-mobile/app/v0.1.2/db
                     "^/migrate/\w+/\w+": lambda handler: authorized(handler, auth) and runMigrations(handler, auth, store),
                     "^/secret/\w+/\w+": lambda handler: authorized(handler, auth) and saveSecret(handler, auth, store),
                 }
@@ -89,8 +91,8 @@ def validate_config(config):
         config["oracle_host"]
         config["oracle_port"]
         config["oracle_service_name"]
-        config["vaulted_oracle_admin_username"]
-        config["vaulted_oracle_admin_password"]
+        config["oracle_admin_username"]
+        config["oracle_admin_password"]
         return None
     except KeyError as e:
         return "Config is missing required parameters: %s" % e
@@ -226,12 +228,9 @@ class myHandler(BaseHTTPRequestHandler):
         self.store = store
         BaseHTTPRequestHandler.__init__(self, *args)
 
-
-    # /tmag/qlab06?artifactory_db_url=https://artifactory.service.edp.t-mobile.com/artifactory/api/storage/tmo-releases/com/tmobile/tmag/4.23_PerfTest.31/db
     def do_GET(self):
         self.router.route("GET", self.path, self)
 
-    # /tmag/qlab06?artifactory_db_url=https://blah.com/t-mobile/app/v0.1.2/db
     def do_POST(self):
         self.router.route("POST", self.path, self)
 
