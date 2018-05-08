@@ -1,0 +1,55 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "db-migrate.fullname" . }}
+  labels:
+    app: {{ template "db-migrate.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "db-migrate.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.service.port }}
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: {{ .Values.service.port }}
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 6
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: {{ .Values.service.port }}
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        envFrom:
+        - configMapRef:
+            name: edp-db-migration-api
+        volumeMounts:
+        - name: secrets
+          mountPath: /secrets
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+      volumes:
+        - name: secrets
+          persistentVolumeClaim:
+           claimName: pvc-migration-secrets

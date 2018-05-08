@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart for a db-migrations API that runs on Kubernetes
+name: db-migrate
+version: 0.1.0

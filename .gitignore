@@ -16,4 +16,4 @@ simple-db-migrate.iml
 .tox
 .eggs
 .idea
-
+configmap.yaml

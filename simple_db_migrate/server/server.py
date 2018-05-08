@@ -74,14 +74,14 @@ def authorized(handler, auth):
         respond(handler, 400, 'text/plain', "Missing required parameters: %s" % e)
         return False
 
-def fetch_artifacts(self, artifactory_dir_url):
+def fetch_artifacts(artifactory_dir_url):
     migrations = {}
-    r = requests.get(artifactory_dir_url, verify=False, auth=HTTPDigestAuth('mihbe1', 'API_KEY_TODO'))
+    r = requests.get(artifactory_dir_url, verify=False, auth=HTTPDigestAuth('mihbe1', 'AKCp5aU5mc6UkxcLw7zK5eUhpj94WZv7pV8KBggePUHqCXhD1mctdKUo5GSAd7pggoUmcff4j'))
     if r.status_code < 200 or r.status_code > 299:
         raise Exception("Fetching artifacts failed %s: %s" % (r.status_code, r.text))
     for f in r.json()["children"]:
         print f
-        fetch_req = requests.get(artifactory_dir_url.replace('api/storage/', '') + f['uri'], verify=False, auth=HTTPDigestAuth('mihbe1', 'API_KEY_TODO'))
+        fetch_req = requests.get(artifactory_dir_url.replace('api/storage/', '') + f['uri'], verify=False, auth=HTTPDigestAuth('mihbe1', 'AKCp5aU5mc6UkxcLw7zK5eUhpj94WZv7pV8KBggePUHqCXhD1mctdKUo5GSAd7pggoUmcff4j'))
         migrations[f['uri'][1:]] = fetch_req.text
     print migrations
     return migrations
@@ -143,12 +143,12 @@ def saveSecret(handler, auth, store):
 
 def runMigrations(handler, auth, store):
     try:
-        app, env = self.path.split('?')[0][1:].split('/')
-        parsed = urlparse.urlparse(self.path)
+        app, env = handler.path.split('?')[0].replace('/migrate/', '').split('/')
+        parsed = urlparse.urlparse(handler.path)
         params = urlparse.parse_qs(parsed.query)
 
         # Fetch application config
-        config = store.fetch("%s/%s" % (app, env))
+        config = json.loads(store.fetch("%s/%s" % (app, env)))
         msg = validate_config(config)
         if msg is not None:
             print "Config is missing required parameters: %s" % e
@@ -181,8 +181,8 @@ def runMigrations(handler, auth, store):
         try:
             cmd = ['db-migrate',
                         '--db-host=%s' % config["oracle_host"],
-                        '--db-user=%s' % config["vaulted_oracle_admin_username"],
-                        '--db-password=%s' % config["vaulted_oracle_admin_password"],
+                        '--db-user=%s' % config["oracle_admin_username"],
+                        '--db-password=%s' % config["oracle_admin_password"],
                         '--db-name=%s' % config["oracle_service_name"],
                         '--db-migrations-dir=%s' % directory + '/ddl',
                         '--db-engine=oracle',
@@ -204,7 +204,7 @@ def runMigrations(handler, auth, store):
                 return
 
             # Respond with 200 OK
-            respond(handler, 200, "text/plain", stdout)
+            respond(handler, 200, "text/plain", "STDOUT:\n" + stdout + "\nSTDERR:\n\n" + stderr)
             return
 
         except KeyError as e:

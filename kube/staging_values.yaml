@@ -1,0 +1,22 @@
+
+ingress:
+  enabled: true
+  # Used to create an Ingress record.
+  hosts:
+    - edp-db-migration-api.px-stg01.k8s.t-mobile.com
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: 'true'
+    ingress.kubernetes.io/use-port-in-redirects: 'true'
+    kubernetes.io/ingress.class: ingress-stg-standard
+    kubernetes.io/tls-acme: 'true'
+  tls:
+   - hosts:
+      - edp-db-migration-api.px-stg01.k8s.t-mobile.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 1000m
+    memory: 1024Mi
