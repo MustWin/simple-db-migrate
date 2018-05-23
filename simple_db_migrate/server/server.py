@@ -199,8 +199,8 @@ def runMigrations(handler, auth, store):
             p = Popen(cmd , cwd=directory, stdin=PIPE, stdout=PIPE, stderr=PIPE,env=os.environ)
             stdout, stderr = p.communicate()
             if p.returncode != 0:
-                print "Error running migrations: %s" % e
-                respond(handler, 400, 'text/plain', "Error running migrations:\n%s" % ("STDOUT:\n" + stdout + "\n\nSTDERR:\n" + stderr))
+                print "Error running migrations %s:\n%s" % (cmd, "STDOUT:\n" + stdout + "\n\nSTDERR:\n" + stderr)
+                respond(handler, 400, 'text/plain', "Error running migrations %s:\n%s" % (cmd, "STDOUT:\n" + stdout + "\n\nSTDERR:\n" + stderr))
                 return
 
             # Respond with 200 OK
