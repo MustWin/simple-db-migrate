@@ -26,7 +26,8 @@ class http_server:
                     "^/config/\w+/\w+$": lambda handler: authorized(handler, auth) and getConfig(handler, auth, store),
                 },
                 "POST": {
-                    # /migrate/tmag/qlab06?artifactory_db_url=https://blah.com/t-mobile/app/v0.1.2/db
+                    # Update to the latest version: /migrate/tmag/qlab06?artifactory_db_url=https://blah.com/t-mobile/app/v0.1.2/db
+                    # Update or rollback to a specific version: /migrate/tmag/qlab06?version=20170703144937&artifactory_db_url=https://blah.com/t-mobile/app/v0.1.2/db
                     "^/migrate/\w+/\w+": lambda handler: authorized(handler, auth) and runMigrations(handler, auth, store),
                     "^/secret/\w+/\w+": lambda handler: authorized(handler, auth) and saveSecret(handler, auth, store),
                 }
@@ -196,6 +197,8 @@ def runMigrations(handler, auth, store):
             sql_prefix_file = directory + ('/config/%s.sql' % env)
             if os.path.isfile(sql_prefix_file):
                 cmd.append('--sql-prefix-file=%s' % sql_prefix_file)
+            if "version" in params:
+                cmd.append('--migration=%s' % params["version"][0])
             p = Popen(cmd , cwd=directory, stdin=PIPE, stdout=PIPE, stderr=PIPE,env=os.environ)
             stdout, stderr = p.communicate()
             if p.returncode != 0:
