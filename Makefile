@@ -42,3 +42,15 @@ dist: clean
 
 publish: dist
 	@python setup.py sdist upload
+
+build_docker:
+	sudo docker build --network=host -f Dockerfile . -t mikejihbe/simple-db-migrate:latest
+	sudo docker push mikejihbe/simple-db-migrate:latest
+
+build_sqlplus_docker:
+	sudo docker build --network=host -f Dockerfile_sqlplus -t mikejihbe/sqlplus:latest .
+	sudo docker push mikejihbe/sqlplus:latest
+
+build_server_docker:
+	sudo docker build --network=host -f Dockerfile_server -t mikejihbe/db-migrate-server:latest .
+	sudo docker push mikejihbe/db-migrate-server:latest

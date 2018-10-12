@@ -254,4 +254,3 @@ class Main(object):
         if self.config.get("log_level", 1) >= log_level_limit:
             CLI.msg(msg, color)
         self.log.debug(msg)
-

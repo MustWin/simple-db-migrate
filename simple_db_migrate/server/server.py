@@ -192,7 +192,6 @@ def runMigrations(handler, auth, store):
                         '--log-dir=/tmp/db-migrate' ,
                         '--log-level=2' ,
                         '--show-sql' ,
-                        '--db-migrations-dir=%s' % directory + '/ddl',
                         ]
             sql_prefix_file = directory + ('/config/%s.sql' % env)
             if os.path.isfile(sql_prefix_file):

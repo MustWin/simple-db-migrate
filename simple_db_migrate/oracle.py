@@ -69,8 +69,6 @@ class Oracle(object):
                 sqlplusPath = oracle_home + '/sqlplus'
                 if not os.path.isfile(sqlplusPath):
                     sqlplusPath = oracle_home + '/bin/sqlplus'
-                # We add this so that db-migrate has a non-zero exit code on failure
-                print sqlplusPath,'-S', "%s/%s@%s:%d/%s" % (self.__user, self.__passwd, self.__host, self.__port, self.__db)
                 sqlplus = Popen([sqlplusPath,'-S', "%s/%s@%s:%d/%s" % (self.__user, self.__passwd, self.__host, self.__port, self.__db)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
                 sqlplus.stdin.write(sql)
                 stdout, stderr = sqlplus.communicate()
