@@ -1,0 +1,11 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: "pvc-{{ template "db-migrate.fullname" . }}"
+spec:
+  accessModes:
+    - "{{ .Values.volume.mode }}"
+  resources:
+    requests:
+      storage: {{ .Values.volume.size }}

@@ -52,4 +52,4 @@ spec:
       volumes:
         - name: secrets
           persistentVolumeClaim:
-           claimName: pvc-migration-secrets
+           claimName: "pvc-{{ template "db-migrate.fullname" . }}"
